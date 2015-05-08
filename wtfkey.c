@@ -1,11 +1,21 @@
 #include "wtfkey.h"
 
 int main (int argc, const char * argv[]) {
+    if(argc == 2) {
+        frequency = atoi(argv[1]);
+    }
+
+    if(frequency < 1) {
+        fprintf(stderr, "Usage: %s [average frequency of insert]\n", argv[0]);
+    }
+
     if (configureRunloop()){
+        fprintf(stderr, "Erroring during setup");
         exit(1);
     }
 
     if(loadDictionary()) {
+        fprintf(stderr, "Erroring loading dictionary");
         exit(1);
     }
 
@@ -140,7 +150,7 @@ int configureRunloop() {
 
 CGEventRef keyCallback(CGEventTapProxy proxy, CGEventType type, CGEventRef event, void *refcon) {
     // Only register key up events with no modifier at a random interval
-    if (emitting || type != kCGEventKeyUp || (flagMask & CGEventGetFlags(event)) || (rand() % FREQ) != 0) {
+    if (emitting || type != kCGEventKeyUp || (flagMask & CGEventGetFlags(event)) || (rand() % frequency) != 0) {
         return NULL;
     }
 

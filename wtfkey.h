@@ -6,13 +6,13 @@
 #include <ApplicationServices/ApplicationServices.h>
 
 #define NON_ALPHA 127
-#define FREQ 1000
 #define DEBUG 0
 #define DICTIONARY_PATH "/usr/share/dict/words"
 
 #define debug_print(...) \
             do { if (DEBUG) fprintf(stderr, ##__VA_ARGS__); } while (0)
 
+int frequency = 0;
 volatile char emitting = 0;
 const CGEventFlags flagMask = kCGEventFlagMaskAlphaShift | kCGEventFlagMaskShift | kCGEventFlagMaskControl | kCGEventFlagMaskAlternate | kCGEventFlagMaskCommand | kCGEventFlagMaskSecondaryFn;
 CFRunLoopSourceRef emittingSource;

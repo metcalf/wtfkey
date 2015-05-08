@@ -26,4 +26,4 @@ clean:
 	rm $(EXECUTABLE)
 
 run: all
-	sudo ./$(EXECUTABLE)
+	sudo ./$(EXECUTABLE) 10
