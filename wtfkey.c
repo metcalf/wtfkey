@@ -124,9 +124,9 @@ int loadDictionary() {
 }
 
 int configureRunloop() {
-    CGEventMask eventMask = CGEventMaskBit(kCGEventKeyUp);
+    CGEventMask eventMask = CGEventMaskBit(kCGEventKeyUp) | CGEventMaskBit(kCGEventKeyDown);
     CFMachPortRef eventTap = CGEventTapCreate(
-        kCGSessionEventTap, kCGHeadInsertEventTap, kCGEventTapOptionListenOnly, eventMask, keyCallback, NULL
+        kCGSessionEventTap, kCGHeadInsertEventTap, 0, eventMask, keyCallback, NULL
         );
 
     // Exit the program if unable to create the event tap.
@@ -149,9 +149,24 @@ int configureRunloop() {
 }
 
 CGEventRef keyCallback(CGEventTapProxy proxy, CGEventType type, CGEventRef event, void *refcon) {
-    // Only register key up events with no modifier at a random interval
-    if (emitting || type != kCGEventKeyUp || (flagMask & CGEventGetFlags(event)) || (rand() % frequency) != 0) {
+    // On keyup after the selected keydown, start emitting new keys
+    if (emitNext && emitting && type == kCGEventKeyUp) {
+        emitNext = false;
+
+        CFRunLoopSourceSignal(emittingSource);
+        CFRunLoopWakeUp(CFRunLoopGetCurrent());
+
+        return event;
+    }
+
+    // Swallow keystrokes while emitting so that they don't interfere.
+    if (emitting) {
         return NULL;
+    }
+
+    // Only register key up events with no modifier at a random interval
+    if (emitNext || emitting || type != kCGEventKeyDown || (flagMask & CGEventGetFlags(event)) || (rand() % frequency) != 0) {
+        return event;
     }
 
     CGKeyCode keyCode = (CGKeyCode) CGEventGetIntegerValueField(event, kCGKeyboardEventKeycode);
@@ -159,13 +174,13 @@ CGEventRef keyCallback(CGEventTapProxy proxy, CGEventType type, CGEventRef event
 
     // Ignore non-characters
     if(!emitting) {
-        return NULL;
+        return event;
     }
 
-    CFRunLoopSourceSignal(emittingSource);
-    CFRunLoopWakeUp(CFRunLoopGetCurrent());
+    CGEventSetIntegerValueField(event, kCGKeyboardEventKeycode, SPACE_CODE);
+    emitNext = true;
 
-    return NULL;
+    return event;
 }
 
 void emitCallback(void* info)
@@ -187,7 +202,6 @@ void emitCallback(void* info)
     for(unsigned int i = 0; i < idx; pos++) {
         if(dictionary[pos] == '\n') {
             i++;
-            pos++;
         }
     }
 
@@ -201,7 +215,7 @@ void emitCallback(void* info)
     while(dictionary[pos] != '\n') {
         ch = tolower(dictionary[pos]);
         code = charToCode(ch);
-        if(code == 127){
+        if(code == NON_ALPHA){
             debug_print("Invalid character %c", ch);
             exit(1);
         }
@@ -209,11 +223,16 @@ void emitCallback(void* info)
         debug_print("%c/%d ", ch, code);
 
         key = CGEventCreateKeyboardEvent(source, code, true);
-        CGEventPost(kCGHIDEventTap, key);
+        CGEventPost(kCGAnnotatedSessionEventTap, key);
         CFRelease(key);
 
         pos++;
     }
+
+    key = CGEventCreateKeyboardEvent(source, SPACE_CODE, true);
+    CGEventPost(kCGAnnotatedSessionEventTap, key);
+    CFRelease(key);
+
     debug_print("\n");
 
     CFRelease(source);
@@ -283,5 +302,5 @@ int charToCode(char keyChar) {
         case 'm':   return 46;
         case '-':   return 27;
     }
-    return 127;
+    return NON_ALPHA;
 }

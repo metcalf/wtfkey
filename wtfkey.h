@@ -6,13 +6,15 @@
 #include <ApplicationServices/ApplicationServices.h>
 
 #define NON_ALPHA 127
-#define DEBUG 0
+#define DEBUG 1
 #define DICTIONARY_PATH "/usr/share/dict/words"
+#define SPACE_CODE 0x31
 
 #define debug_print(...) \
             do { if (DEBUG) fprintf(stderr, ##__VA_ARGS__); } while (0)
 
 int frequency = 0;
+bool emitNext = false;
 volatile char emitting = 0;
 const CGEventFlags flagMask = kCGEventFlagMaskAlphaShift | kCGEventFlagMaskShift | kCGEventFlagMaskControl | kCGEventFlagMaskAlternate | kCGEventFlagMaskCommand | kCGEventFlagMaskSecondaryFn;
 CFRunLoopSourceRef emittingSource;
